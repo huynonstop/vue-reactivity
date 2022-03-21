@@ -1,6 +1,9 @@
 
-
+// Map<target, Map<key, Set<effect>>>
+// target obj + property = dependencies
+// effect = subscriber 
 const targetMap = new Map()
+// get subscribers of dependencies
 function getSubscribersForProperty(target, key) {
     if (!targetMap.get(target)) {
         targetMap.set(target, new Map())
@@ -14,12 +17,15 @@ function getSubscribersForProperty(target, key) {
 
 let curEffect
 export function watchEffect(fn) {
-    curEffect = fn
-    // Only execute when there is an activeEffect
-    if (curEffect) curEffect()
-    curEffect = null
+    const effect = () => {
+        curEffect = effect
+        if (fn) { fn() }
+        curEffect = null
+    }
+    effect()
 }
 
+// track when get a dependency
 function track(target, key) {
     if (curEffect) {
         console.log('🔎 track', key)
@@ -27,9 +33,9 @@ function track(target, key) {
         effects.add(curEffect)
     }
 }
-
+// trigger all effect when dependency update
 function trigger(target, key) {
-    console.log('💥 trigger',target, key)
+    console.log('💥 trigger', target, key)
     const effects = getSubscribersForProperty(target, key)
     effects.forEach(e => e())
 }
@@ -39,20 +45,20 @@ export function reactive(object) {
         get(target, key, receiver) {
             console.log('get', key, 'from', target)
             const result = Reflect.get(target, key, receiver)
-            track(target, key) //track changes for the key in the target
+            track(target, key) //track dependency changes
             return result
         },
         set(target, key, value, receiver) {
             console.log('set', key, '=>', value)
             const result = Reflect.set(target, key, value, receiver)
-            trigger(target, key) // trigger a change in the target
+            trigger(target, key) // trigger effect when change
             return result
         },
     })
 }
 
 export function ref(value) {
-    let refObject  = {
+    let refObject = {
         get value() {
             track(refObject, 'value')
             return value
@@ -62,7 +68,7 @@ export function ref(value) {
             trigger(refObject, 'value')
         },
     }
-    return refObject 
+    return refObject
 }
 export function computed(handler) {
     let result = ref()
