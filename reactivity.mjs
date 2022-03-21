@@ -16,6 +16,8 @@ function getSubscribersForProperty(target, key) {
 }
 
 let curEffect
+// created an effect that automatically tracks its dependencies,
+// and re-runs whenever a dependency changes.
 export function watchEffect(fn) {
     const effect = () => {
         curEffect = effect
